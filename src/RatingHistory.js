@@ -86,18 +86,25 @@ export class RatingHistory {
 						borderColor: 'transparent',
 						backgroundColor: 'rgb(36, 38, 41)',
 						type: 'line',
-						lineTension: 0
+						lineTension: 0,
+						fill: 'start',
+						pointRadius: 0
 					}
 				]
 			},
 			options: {
 				scales: {
-					xAxes: [{
+					x: {
+						offset: false,
 						type: 'time',
 						time: {
 							unit: 'month'
 						}
-					}]
+					},
+					y: {
+						min: 0,
+						max: 5
+					}
 				}
 			}
 		});
