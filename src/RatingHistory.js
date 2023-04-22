@@ -1,5 +1,5 @@
 import { Review } from "./Review.js";
-import { getHtml, log } from "./basics.js";
+import { $, $$, getHtml, log } from "./basics.js";
 
 export class RatingHistory {
 	constructor() {
@@ -15,11 +15,13 @@ export class RatingHistory {
 
 
 	async init() {
-		await this.addDom();
-		const url = location.pathname.replace(/(^\/threads\/[^/]+)(\/.*)?$/, '$1/br-reviews');
-		const reviews = await this.loadReviews(url);
-		log('reviews:', reviews);
-		await this.addChart(reviews);
+		if ($('.tabs-tab[href*="br-reviews"]')) {
+			await this.addDom();
+			const url = location.pathname.replace(/(^\/threads\/[^/]+)(\/.*)?$/, '$1/br-reviews');
+			const reviews = await this.loadReviews(url);
+			log('reviews:', reviews);
+			await this.addChart(reviews);
+		}
 	}
 
 

@@ -1,3 +1,5 @@
+import { $, $$ } from "./basics.js";
+
 export class Review {
 	/**@type {HTMLElement}*/ root;
 	/**@type {Number}*/ rating;

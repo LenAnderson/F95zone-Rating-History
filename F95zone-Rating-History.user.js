@@ -2,7 +2,7 @@
 // @name         F95zone - Rating History
 // @namespace    https://github.com/LenAnderson/
 // @downloadURL  https://github.com/LenAnderson/F95zone-Rating-History/raw/master/F95zone-Rating-History.user.js
-// @version      1.2.0
+// @version      1.2.1
 // @author       LenAnderson
 // @match        https://f95zone.to/threads/*
 // @grant        none
@@ -19,7 +19,45 @@
 
 
 
+// src\basics.js
+const log = (...msgs)=>console.log.call(console.log, '[FRH]', ...msgs);
+
+
+const $ = (query,root)=>(root?query:document).querySelector(root?root:query);
+const $$ = (query,root)=>Array.from((root?query:document).querySelectorAll(root?root:query));
+
+
+const get = (url) => {
+	return new Promise((resolve,reject)=>{
+		const xhr = new XMLHttpRequest();
+		xhr.open('GET', url, true);
+		xhr.addEventListener('load', ()=>{
+			resolve(xhr.responseText);
+		});
+		xhr.addEventListener('error', ()=>{
+			reject(xhr);
+		});
+		xhr.send();
+	});
+};
+const getHtml = (url) => {
+	return get(url).then(txt=>{
+		const html = document.createElement('div');
+		html.innerHTML = txt;
+		return html;
+	});
+};
+const getJson = (url) => {
+	return get(url).then(JSON.parse);
+}
+
+
+const wait = async(millis)=>new Promise(resolve=>setTimeout(resolve, millis));
+
+
 // src\Review.js
+
+
 class Review {
 	/**@type {HTMLElement}*/ root;
 	/**@type {Number}*/ rating;
@@ -55,11 +93,13 @@ class RatingHistory {
 
 
 	async init() {
-		await this.addDom();
-		const url = location.pathname.replace(/(^\/threads\/[^/]+)(\/.*)?$/, '$1/br-reviews');
-		const reviews = await this.loadReviews(url);
-		log('reviews:', reviews);
-		await this.addChart(reviews);
+		if ($('.tabs-tab[href*="br-reviews"]')) {
+			await this.addDom();
+			const url = location.pathname.replace(/(^\/threads\/[^/]+)(\/.*)?$/, '$1/br-reviews');
+			const reviews = await this.loadReviews(url);
+			log('reviews:', reviews);
+			await this.addChart(reviews);
+		}
 	}
 
 
@@ -150,42 +190,6 @@ class RatingHistory {
 		});
 	}
 }
-
-
-// src\basics.js
-const log = (...msgs)=>console.log.call(console.log, '[FRH]', ...msgs);
-
-
-const $ = (query,root)=>(root?query:document).querySelector(root?root:query);
-const $$ = (query,root)=>Array.from((root?query:document).querySelectorAll(root?root:query));
-
-
-const get = (url) => {
-	return new Promise((resolve,reject)=>{
-		const xhr = new XMLHttpRequest();
-		xhr.open('GET', url, true);
-		xhr.addEventListener('load', ()=>{
-			resolve(xhr.responseText);
-		});
-		xhr.addEventListener('error', ()=>{
-			reject(xhr);
-		});
-		xhr.send();
-	});
-};
-const getHtml = (url) => {
-	return get(url).then(txt=>{
-		const html = document.createElement('div');
-		html.innerHTML = txt;
-		return html;
-	});
-};
-const getJson = (url) => {
-	return get(url).then(JSON.parse);
-}
-
-
-const wait = async(millis)=>new Promise(resolve=>setTimeout(resolve, millis));
 // ---------------- /IMPORTS ----------------
 
 

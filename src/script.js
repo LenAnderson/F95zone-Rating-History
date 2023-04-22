@@ -2,7 +2,7 @@
 // @name         F95zone - Rating History
 // @namespace    https://github.com/LenAnderson/
 // @downloadURL  https://github.com/LenAnderson/F95zone-Rating-History/raw/master/F95zone-Rating-History.user.js
-// @version      1.2.0
+// @version      1.2.1
 // @author       LenAnderson
 // @match        https://f95zone.to/threads/*
 // @grant        none
