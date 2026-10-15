@@ -96,17 +96,17 @@ export class RatingHistory {
 			},
 			options: {
 				scales: {
-					x: {
+					xAxes: [{
 						offset: false,
 						type: 'time',
 						time: {
 							unit: 'month'
 						}
-					},
-					y: {
+					}],
+					yAxes: [{
 						min: 0,
 						max: 5
-					}
+					}]
 				}
 			}
 		});
