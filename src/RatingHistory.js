@@ -1,3 +1,4 @@
+import { Cache } from './Cache.js';
 import { Review } from "./Review.js";
 import { $, $$, getHtml, log } from "./basics.js";
 
@@ -42,17 +43,30 @@ export class RatingHistory {
 	}
 
 
-	async loadReviews(url) {
+	async loadReviews(url, isPage = false) {
 		log('RatingHistory.loadReviews', url);
+		const key = url.replace(/^\/threads\/[^/]+\.(\d+)(\/.*)?$/, '$1');
+		if (!isPage) {
+			const cached = await Cache.get(key);
+			if (cached) {
+				log('CACHE_HIT', url);
+				return cached.map(rv=>Review.fromValue(rv));
+			}
+			log('NO_CACHE', url);
+		}
+
 		const html = await getHtml(url);
 		const reviews = $$(html, '.p-body-pageContent > .block > .block-container > .block-body > .block-row > .message--review > .contentRow').map(it=>new Review(it));
 		log(reviews);
 
 		const next = $(html, '.pageNav-jump--next');
 		if (next) {
-			reviews.push(...(await this.loadReviews(next.href)));
+			reviews.push(...(await this.loadReviews(next.href, true)));
 		}
 		reviews.sort((a,b)=>a.date-b.date);
+		if (!isPage) {
+			await Cache.set(key, reviews.map(r=>r.toValue()));
+		}
 		return reviews;
 	}
 
