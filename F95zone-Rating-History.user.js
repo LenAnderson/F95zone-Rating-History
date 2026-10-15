@@ -2,7 +2,7 @@
 // @name         F95zone - Rating History
 // @namespace    https://github.com/LenAnderson/
 // @downloadURL  https://github.com/LenAnderson/F95zone-Rating-History/raw/master/F95zone-Rating-History.user.js
-// @version      1.2.1
+// @version      1.3.0
 // @author       LenAnderson
 // @match        https://f95zone.to/threads/*
 // @grant        none
@@ -17,6 +17,58 @@
 
 // ---------------- IMPORTS  ----------------
 
+
+
+// src\Cache.js
+class CacheItem {
+	/**@type {number} */ updatedAt;
+	/**@type {ReviewValue[]} */ reviews;
+}
+
+const MAX_CACHE_AGE = 48 * 60 * 60 * 1000;
+
+class Cache {
+	/**
+	 * 
+	 * @returns {Promise<Record<string, CacheItem>>}
+	 */
+	static async #load() {
+		return JSON.parse(localStorage.getItem('frh-cache') ?? '{}');
+	}
+	static async #save(data) {
+		localStorage.setItem('frh-cache', JSON.stringify(data));
+	}
+
+
+	/**
+	 * 
+	 * @param {string} key 
+	 * @returns {Promise<ReviewValue[] | undefined>}
+	 */
+	static async get(key) {
+		const cache = await this.#load();
+		const item = cache[key];
+		if (!item) return undefined;
+		if (Date.now() - item?.updatedAt > MAX_CACHE_AGE) {
+			return undefined;
+		}
+		return item.reviews;
+	}
+
+	/**
+	 * 
+	 * @param {string} key 
+	 * @param {ReviewValue[]} reviews 
+	 */
+	static async set(key, reviews) {
+		const cache = await this.#load();
+		cache[key] = {
+			reviews,
+			updatedAt: Date.now(),
+		};
+		await this.#save(cache);
+	}
+}
 
 
 // src\basics.js
@@ -64,18 +116,50 @@ class Review {
 	/**@type {Date}*/ date;
 
 
+	/**
+	 * 
+	 * @param {ReviewValue} value 
+	 * @returns {Review}
+	 */
+	static fromValue(value) {
+		const review = new Review();
+		review.date = new Date(value.date);
+		review.rating = value.rating;
+		return review;
+	}
+
+
 
 
 	constructor(root) {
-		this.root = root;
-
-		this.rating = $$(root, '.contentRow-extra > .ratingStars > .ratingStars-star--full').length;
-		this.date = new Date($(root, '.message-footer > .message-actionBar > .actionBar-set > .contentRow-muted > .u-dt').getAttribute('data-time') * 1000);
+		if (root) {
+			this.root = root;
+	
+			this.rating = $$(root, '.contentRow-extra > .ratingStars > .ratingStars-star--full').length;
+			this.date = new Date($(root, '.message-footer > .message-actionBar > .actionBar-set > .contentRow-muted > .u-dt').getAttribute('data-time') * 1000);
+		}
 	}
+
+	/**
+	 * 
+	 * @returns {ReviewValue}
+	 */
+	toValue() {
+		return {
+			date: this.date.getTime(),
+			rating: this.rating
+		};
+	}
+}
+
+class ReviewValue {
+	/**@type {Number}*/ rating;
+	/**@type {Date}*/ date;
 }
 
 
 // src\RatingHistory.js
+
 
 
 
@@ -120,17 +204,30 @@ class RatingHistory {
 	}
 
 
-	async loadReviews(url) {
+	async loadReviews(url, isPage = false) {
 		log('RatingHistory.loadReviews', url);
+		const key = url.replace(/^\/threads\/[^/]+\.(\d+)(\/.*)?$/, '$1');
+		if (!isPage) {
+			const cached = await Cache.get(key);
+			if (cached) {
+				log('CACHE_HIT', url);
+				return cached.map(rv=>Review.fromValue(rv));
+			}
+			log('NO_CACHE', url);
+		}
+
 		const html = await getHtml(url);
 		const reviews = $$(html, '.p-body-pageContent > .block > .block-container > .block-body > .block-row > .message--review > .contentRow').map(it=>new Review(it));
 		log(reviews);
 
 		const next = $(html, '.pageNav-jump--next');
 		if (next) {
-			reviews.push(...(await this.loadReviews(next.href)));
+			reviews.push(...(await this.loadReviews(next.href, true)));
 		}
 		reviews.sort((a,b)=>a.date-b.date);
+		if (!isPage) {
+			await Cache.set(key, reviews.map(r=>r.toValue()));
+		}
 		return reviews;
 	}
 
@@ -174,17 +271,17 @@ class RatingHistory {
 			},
 			options: {
 				scales: {
-					x: {
+					xAxes: [{
 						offset: false,
 						type: 'time',
 						time: {
 							unit: 'month'
 						}
-					},
-					y: {
+					}],
+					yAxes: [{
 						min: 0,
 						max: 5
-					}
+					}]
 				}
 			}
 		});
